@@ -1,36 +1,164 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Q-Serve
 
-## Getting Started
+Q-Serve est un système de gestion de file d'attente permettant aux clients de s'enregistrer pour obtenir un ticket et aux agents de gérer les appels et les services. Le projet inclut un backend Node.js avec Express et MySQL, un frontend Next.js avec DaisyUI pour une interface moderne et responsive, et un écran d'affichage déporté avec annonces vocales via Web Speech API. Les mises à jour en temps réel sont gérées via Socket.io.
 
-First, run the development server:
+# Fonctionnalités
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Côté Agent** :
+  - Connexion avec nom et mot de passe.
+  - Tableau de bord pour visualiser les clients en attente (`waiting`) et en service (`in_service`).
+  - Actions : appeler un client, terminer un service, changer de statut (`available`, `busy`, `unavailable`).
+- **Côté Client** :
+  - Enregistrement avec prénom et nom pour générer un ticket.
+  - Suivi du statut du ticket (`waiting`, `in_service`, `done`) en temps réel.
+- **Affichage déporté** :
+  - Affiche le dernier client appelé (numéro de ticket et guichet).
+  - Liste défilante des clients en attente.
+  - Annonces vocales via Web Speech API (ex. : "Client numéro X, veuillez vous présenter au guichet Y").
+- **Synchronisation** : Mises à jour en temps réel via WebSocket pour les changements de file et de statut.
+- **Interface** : Design responsive avec DaisyUI (basé sur Tailwind CSS).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# Prérequis
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js : v16 ou supérieur
+- MySQL : v8 ou supérieur
+- npm : v8 ou supérieur
+- Navigateur moderne (pour Web Speech API, recommandé : Chrome)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Structure du projet
 
-## Learn More
+- **backend/** : API Express avec TypeScript, MySQL, Socket.io
+  - `src/index.ts` : Point d'entrée du serveur
+  - `src/routes/agent.ts` : Routes pour les agents (login, queue, call, complete, status)
+  - `src/routes/client.ts` : Routes pour les clients (register, status, tickets)
+  - `src/db.ts` : Connexion à MySQL
+- **q-serve/** : Frontend Next.js avec TypeScript et DaisyUI
+  - `app/login/page.tsx` : Page de connexion pour les agents
+  - `app/agent/page.tsx` : Tableau de bord des agents
+  - `app/client/page.tsx` : Interface pour l'enregistrement et le suivi des clients
+  - `app/display/page.tsx` : Écran d'affichage déporté avec annonces vocales
+  - `app/globals.css` : Styles globaux incluant l'animation marquee
 
-To learn more about Next.js, take a look at the following resources:
+# Installation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Cloner le dépôt :
+   ```
+   git clone <URL_DU_DEPOT>
+   cd q-serve
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Configurer le backend :
+   ```
+   cd backend
+   npm install
+   ```
+   - Configure la base de données MySQL dans `src/db.ts` :
+     ```
+     import mysql from 'mysql2/promise';
 
-## Deploy on Vercel
+     const pool = mysql.createPool({
+       host: 'localhost',
+       user: 'root',
+       password: 'your_password',
+       database: 'qserve',
+     });
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+     export default pool;
+     ```
+   - Crée la base de données et les tables :
+     ```
+     CREATE DATABASE qserve;
+     USE qserve;
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+     CREATE TABLE agents (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       name VARCHAR(50) NOT NULL,
+       password VARCHAR(255) NOT NULL,
+       status ENUM('available', 'busy', 'unavailable') DEFAULT 'unavailable'
+     );
+
+     CREATE TABLE queue (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       customer_name VARCHAR(100) NOT NULL,
+       ticket_number INT NOT NULL,
+       status ENUM('waiting', 'in_service', 'done') DEFAULT 'waiting',
+       assigned_agent VARCHAR(50),
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+     );
+
+     INSERT INTO agents (name, password, status) VALUES
+     ('Agent1', 'password123', 'unavailable'),
+     ('Agent2', 'password456', 'unavailable');
+
+     INSERT INTO queue (customer_name, ticket_number, status) VALUES
+     ('Jean Dupont', 1, 'waiting'),
+     ('Marie Curie', 2, 'waiting');
+     ```
+
+3. Configurer le frontend :
+   ```
+   cd q-serve
+   npm install
+   ```
+
+4. Dépendances :
+   - Backend : `express`, `mysql2`, `socket.io`, `typescript`, `ts-node`, `@types/express`, `@types/node`, `@types/socket.io`, `cors`, `@types/cors`, `express-validator`, `bcrypt`
+   - Frontend : `next`, `react`, `react-dom`, `typescript`, `@types/react`, `@types/react-dom`, `socket.io-client`, `tailwindcss`, `daisyui`
+
+# Exécution
+
+1. Lancer le backend :
+   ```
+   cd backend
+   npm start
+   ```
+   Le serveur s'exécute sur `http://localhost:3001`. Vérifie la route `/health` pour confirmer.
+
+2. Lancer le frontend :
+   ```
+   cd q-serve
+   npm run dev
+   ```
+   L'application est accessible sur `http://localhost:3000`.
+
+3. URLs principales :
+   - `/login` : Connexion des agents
+   - `/agent` : Tableau de bord des agents
+   - `/client` : Interface pour l'enregistrement et le suivi des clients
+   - `/display` : Écran d'affichage déporté
+
+# Utilisation
+
+- **Agents** :
+  - Connectez-vous sur `/login` (ex. : `Agent1`, `password123`).
+  - Dans `/agent`, changez votre statut à `available`, appelez un client, puis terminez le service.
+- **Clients** :
+  - Sur `/client`, entrez votre prénom et nom pour obtenir un ticket.
+  - Suivez le statut de votre ticket en temps réel (passe à `in_service` ou `done`).
+- **Affichage** :
+  - Sur `/display`, visualisez le dernier client appelé et la liste défilante des clients en attente.
+  - Les annonces vocales sont jouées automatiquement pour chaque nouvel appel.
+- **Mises à jour** : Les changements (ex. : appel d’un client) sont reflétés en temps réel via WebSocket.
+
+# Prochaines étapes
+
+- Sécurisation :
+  - Hacher les mots de passe avec `bcrypt`.
+  - Utiliser JWT pour gérer les sessions (remplacer `localStorage`).
+- Validation : Ajouter `express-validator` pour valider les entrées API.
+- Tests : Implémenter des tests unitaires avec Jest/React Testing Library.
+- Améliorations UI : Ajouter des animations DaisyUI et personnaliser les thèmes.
+- Accessibilité : Ajouter des sous-titres pour les annonces vocales.
+
+# Contribution
+
+1. Créez une branche pour vos modifications :
+   ```
+   git checkout -b feature/<nom-de-la-fonctionnalite>
+   ```
+2. Testez localement avant de pousser.
+3. Soumettez une pull request avec un message de commit clair.
+
+# Licence
+
+MIT License (à définir selon vos besoins).
