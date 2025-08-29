@@ -8,6 +8,7 @@ interface Ticket {
   customer_name: string;
   status: "waiting" | "in_service" | "done";
   assigned_agent: string | null;
+  created_at: string;
 }
 
 export default function ClientPage() {
@@ -98,6 +99,7 @@ export default function ClientPage() {
           customer_name: data.customer_name,
           status: "waiting",
           assigned_agent: null,
+          created_at: new Date().toISOString(),
         };
         setTicket(newTicket);
         localStorage.setItem("ticket", JSON.stringify(newTicket));
