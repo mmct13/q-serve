@@ -161,4 +161,4 @@ Q-Serve est un système de gestion de file d'attente permettant aux clients de s
 
 # Licence
 
-MIT License (à définir selon vos besoins).
+MIT License.
